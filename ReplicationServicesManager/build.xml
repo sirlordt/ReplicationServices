@@ -1,0 +1,211 @@
+<project name="ReplicationServicesManager" default="00_Build-All" basedir=".">
+ 
+    <target name="00_Build-All" depends="01_Init, 02_Create_Bin_Folders_And_Files_ServicesDaemon, 03_Compile-ReplicationCommonLibs-Source, 04_Create-ReplicationCommonLibs.jar, 05_Compile-ReplicationServicesManager-Source, 06_Create-ReplicationServicesManager.jar, 07_Compile-ReplicationServices-Source, 08_Generate-ReplicationServices-Jar-Files" description="Compile ALL and package ALL">
+        <echo message="Compile ALL and create ALL .jar file" />
+    </target>
+
+    <target name="01_Init">
+        <tstamp />
+    
+        <property name="distro-bin" value="distro-bin/" />
+        <property name="bin" value="bin/" />
+        
+        <echo message="Remember to adjust the path to the root of the project ServicesDaemon to property ${ServicesDaemon-Workspace}" />
+        <property name="ServicesDaemon-Workspace" value="/home/sirlordt/Documentos/git/servicesdaemon/ServicesDaemon/" />
+        
+        <property name="distro-bin-ServicesDaemon" value="${ServicesDaemon-Workspace}/${distro-bin}/ServicesDaemon/" />
+        
+        <property name="bin-ServicesDaemon" value="${ServicesDaemon-Workspace}/${bin}/ServicesDaemon/" />
+    
+        <property name="src-ReplicationCommonClasses" value="ReplicationCommonLibs/ReplicationCommonClasses/" />
+        <property name="bin-ReplicationCommonClasses" value="bin/ReplicationCommonClasses/" />
+
+        <property name="ReplicationCommonClassesName" value="ReplicationCommonClasses" />
+        
+        <property name="ReplicationCommonLibsName" value="ReplicationCommonLibs" />
+        <property name="ReplicationCommonLibsVersion" value="0.0.0.1" />
+
+        <property name="bin-SystemEnumServices" value="${bin}/SystemReplicationEnumServices/" />
+        <property name="src-SystemEnumServices" value="SystemEnumServices/SystemReplicationEnumServices" />
+
+        <property name="SystemEnumServicesName" value="SystemReplicationEnumServices" />
+        <property name="SystemEnumServicesVersion" value="0.0.0.1" />
+        
+        <property name="bin-SystemPing" value="${bin}/SystemReplicationPing/" />
+        <property name="src-SystemPing" value="SystemPing/SystemReplicationPing" />
+
+        <property name="SystemPingName" value="SystemReplicationPing" />
+        <property name="SystemPingVersion" value="0.0.0.1" />
+    	
+        <property name="src-ReplicationServicesManager" value="ReplicationServicesManager/ReplicationServicesManager/" />
+        <property name="bin-ReplicationServicesManager" value="bin/ReplicationServicesManager/" />
+
+        <property name="ReplicationServicesManagerName" value="ReplicationServicesManager" />
+        <property name="ReplicationServicesManagerVersion" value="0.0.0.1" />
+        
+        <property name="bin-ServicesDaemon-ReplicationServicesManager" value="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/" />
+    	
+        <property name="EnableDebug" value="true"/>
+        
+        <path id="class_path_ServicesDaemon_Libs_jars">
+                
+           <fileset dir="${distro-bin-ServicesDaemon}/Libs">
+               <include name="**/*.jar" />
+           </fileset>
+                
+        </path> 
+
+        <path id="class_path_ReplicationServicesManager_Libs_jars">
+                
+           <fileset dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs">
+               <include name="**/*.jar" />
+           </fileset>
+                
+        </path> 
+    	
+    </target>
+	
+    <target name="02_Create_Bin_Folders_And_Files_ServicesDaemon" depends="01_Init" description="Generate all struct need for bin folder">
+
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ReplicationServices"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Langs"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Logs"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp"/>
+        <copy file="${src-ReplicationServicesManager}/ReplicationServicesManager.conf" todir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager" overwrite="true"/>
+        <copy file="${src-ReplicationServicesManager}/Langs/ReplicationServicesManager.init.lang.xml" todir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Langs" overwrite="true"/>
+        
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/readme.txt"/>
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt"/>
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt"/>
+        
+        <touch file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/readme.txt"/>
+        <touch file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt"/>
+        <touch file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt"/>
+        
+        <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/readme.txt" append="true" message="Folder for support library (*.jar) files need for run the manager${line.separator}"/>
+        <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt" append="true" message="Here you can put all the (*.jar) files that implement the CAbstractResponseFormat class to extend formats reponses embedded in system.${line.separator}${line.separator}The directory must exist.${line.separator}"/>
+        <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt" append="true" message="Temporal storage for multiple purposes${line.separator}"/>
+        
+        <copy todir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs" overwrite="true">
+            <fileset dir="${src-ReplicationServicesManager}/Libs/" includes="**/*.jar"/>
+        </copy> 
+        
+    </target>
+	
+    <target name="03_Compile-ReplicationCommonLibs-Source" depends="01_Init" description="Only compile ReplicationCommonLibs source folder">
+        <mkdir dir="${bin}"/>
+        <javac includeantruntime="false" destdir="${bin}" debug="${EnableDebug}">
+            <src path="${src-ReplicationCommonClasses}" />
+            <classpath refid="class_path_ServicesDaemon_Libs_jars"/>
+            <classpath refid="class_path_ReplicationServicesManager_Libs_jars"/>
+            <!-- compilerarg value = "-XDignore.symbol.file " --> 
+        </javac>    
+    </target>
+	
+    <target name="04_Create-ReplicationCommonLibs.jar" depends="01_Init" description="Generate ReplicationCommonLibs.jar file for [ServicesDaemon-Workspace]/bin/ServicesDaemon/Managers/03_ReplicationServicesManager/Libs folder">
+    
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/${ReplicationCommonLibsName}.jar"/>
+        
+        <jar jarfile="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/${ReplicationCommonLibsName}.jar" index="no" compress="yes" update="true">
+            <fileset dir="${bin}" includes="${ReplicationCommonClassesName}/*.class"/>
+            <manifest>
+                <attribute name="Built-By" value="${user.name}" />
+                <attribute name="Specification-Title" value="${ReplicationCommonLibsName}" />
+                <attribute name="Specification-Version" value="${ReplicationCommonLibsVersion}" />
+            </manifest>
+        </jar>
+        
+    </target>
+	
+    <target name="05_Compile-ReplicationServicesManager-Source" depends="01_Init" description="Only compile ReplicationServicesManager source folder">
+        
+        <mkdir dir="${bin}"/>
+        
+        <javac includeantruntime="false" destdir="${bin}" debug="${EnableDebug}">
+            <src path="${src-ReplicationServicesManager}" />
+            <classpath refid="class_path_ServicesDaemon_Libs_jars"/>
+            <classpath refid="class_path_ReplicationServicesManager_Libs_jars"/>
+            <!-- compilerarg value = "-XDignore.symbol.file " --> 
+        </javac>
+        
+    </target>
+    
+    <target name="06_Create-ReplicationServicesManager.jar" depends="01_Init" description="Generate ReplicationServicesManager.jar file for [ServicesDaemon-Workspace]/bin/ServicesDaemon/Managers/03_ReplicationServicesManager folder">
+
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/${ReplicationServicesManagerName}.jar"/>
+        
+        <jar jarfile="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/${ReplicationServicesManagerName}.jar" index="no" compress="yes" update="true">
+            <fileset dir="${bin}" includes="${ReplicationServicesManagerName}/*.class"/>
+            <manifest>
+                <attribute name="Built-By" value="${user.name}" />
+                <attribute name="Specification-Title" value="${ReplicationServicesManagerName}" />
+                <attribute name="Specification-Version" value="${ReplicationServicesManagerVersion}" />
+            </manifest>
+            <service type="AbstractServicesManager.CAbstractServicesManager">
+                <provider classname="ReplicationServicesManager.CServicesManager"/>
+            </service>  
+        </jar>
+        
+    </target>   
+	
+    <target name="07_Compile-ReplicationServices-Source" depends="01_Init" description="Only compile ReplicationServices System.Replicate.Command source folder">
+    
+        <mkdir dir="${bin}"/>
+
+        <javac includeantruntime="false" destdir="${bin}" includes="**/*.java" debug="${EnableDebug}">
+            <src path="${src-SystemEnumServices}" />
+            <src path="${src-SystemPing}" />
+            <classpath refid="class_path_ServicesDaemon_Libs_jars"/>
+            <!-- Include en el class path the ReplicationCommonLibs.jar and another jar located in libs folder -->
+            <classpath refid="class_path_ReplicationServicesManager_Libs_jars"/>
+        </javac>
+        
+    </target>
+    
+    <target name="08_Generate-ReplicationServices-Jar-Files" depends="01_Init"  description="Generate SystemReplicateCommand.jar from source folder">
+    
+        <delete file="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Enum.Services/${SystemEnumServicesName}.jar"/>
+        
+        <jar jarfile="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Enum.Services/${SystemEnumServicesName}.jar" index="no" compress="yes" update="true">
+            <fileset dir="${bin}" includes="${SystemEnumServicesName}/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By" value="${user.name}" />
+                <attribute name="Specification-Title" value="${SystemEnumServicesName}" />
+                <attribute name="Specification-Version" value="${SystemEnumServicesVersion}" />
+            </manifest>
+            <service type="ReplicationCommonClasses.CReplicationAbstractService">
+                <provider classname="SystemReplicationEnumServices.CSystemEnumServices"/>
+            </service>  
+        </jar>
+        
+        <copy todir="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Enum.Services/Langs/" overwrite="true">
+            <fileset dir="${src-SystemEnumServices}/Langs">
+                <include name="**/*.lang.xml" />
+            </fileset>
+        </copy> 
+        
+        <delete file="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Ping/${SystemPingName}.jar"/>
+        
+        <jar jarfile="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Ping/${SystemPingName}.jar" index="no" compress="yes" update="true">
+            <fileset dir="${bin}" includes="${SystemPingName}/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By" value="${user.name}" />
+                <attribute name="Specification-Title" value="${SystemPingName}" />
+                <attribute name="Specification-Version" value="${SystemPingVersion}" />
+            </manifest>
+            <service type="ReplicationCommonClasses.CReplicationAbstractService">
+                <provider classname="SystemReplicationPing.CSystemPing"/>
+            </service>  
+        </jar>
+    
+        <copy todir="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Ping/Langs/" overwrite="true">
+            <fileset dir="${src-SystemPing}/Langs">
+                <include name="**/*.lang.xml" />
+            </fileset>
+        </copy> 
+
+    </target>	
+</project>

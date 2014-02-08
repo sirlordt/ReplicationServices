@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM  "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<comment>Language file messages translations</comment>
+
+<entry key="Reading XML database connection: [%s]">Leyendo conexión a base de datos XML: [%s]</entry>
+<entry key="Reading XML built in response format: [%s]">Leyendo formato de respuesta incorporado XML: [%s]</entry>
+<entry key="Loading database maps from file [%s]">Cargando mapas de base de datos del archivo [%s]</entry>
+<entry key="Loading DBActions from file [%s]">Cargando DBActions del archivo [%s]</entry>
+
+<entry key="No responses formats drivers found in path [%s]">No hay controladores de formato de respuesta en la ruta:[%s]</entry>
+<entry key="No business process services found in path [%s]">No hay servicios de procesos de negocios en la ruta: [%s]</entry>
+
+<entry key="Registered response format: [%s] min version: [%s] max version: [%s]">Formato de respuesta: [%s] versión mínima: [%s] versión máxima: [%s] registrado</entry>
+
+<entry key="Adding to end of list the built in responses formats">Agregando al final de la lista los formatos de respuestas incorporados</entry>
+<entry key="Added built in response format [%s] min version: [%s] max version: [%s]">Agregando el formato de respuesta incorporado [%s] versión mínima: [%s] versión máxima: [%s]</entry>
+
+<entry key="The default response format [$s] version [%s] not found">El formato de respuesta por defecto [%s] versión [%s] no fue encontrado</entry>
+<entry key="The default response format [$s] found, but the version [%s] not found, using the min version [%s] available">El formato de respuesta por defecto [%s] fue encontrado, pero la versión [%s] no fue encontrada, usando la vesión mínima disponible [%s]</entry>
+
+<entry key="Using default response format: [$s] min version: [%s]">Usando el como formato de respuesa por defecto: [%s] versión mínima: [%s]</entry>
+<entry key="Count of responses formats registered: [%s]">Cantidad de formatos de respuestas registrados: [%s]></entry>
+
+<entry key="[%s] from [%s] = [%s] not found">[%s] usando [%s] = [%s] no fue encontrado</entry>
+<entry key="Added [%s] [%s] = [%s] and [%s] = [%s]">Agregado [%s] [%s] = [%s] y [%s] = [%s]</entry>
+<entry key="Removed [%s] by [%s] = [%s]">Eliminado [%s] por [%s] = [%s]</entry>
+
+<entry key="The security token [%s] is incorrect. Possible attempted robbery in progress session">El token de seguridad [%s] es incorrecto. Posible intento de robo de sesión en progreso</entry>
+<entry key="You must log in before using the service [%s]">Debe iniciar sesión antes de usar el servicio [%s]</entry>
+<entry key="The service name [%s] not found">El servicio de nombre [%s] no fue encontrado</entry>
+<entry key="Fatal error, no response format found">Error fatal, ningún formato de respuesta encontrado</entry>
+
+<entry key="Registered service: [%s] description: [%s] version: [%s]">Servicio: [%s] regitrado descripción: [%s] versión: [%s]</entry>
+<entry key="Count of services registered: [%s]">Cantidad de servicios registrados: [%s]</entry>
+<entry key="The service name [%s] return negative value [%s]">El servicio de nombre [%s] retorna un valor negativo [%s]</entry>
+<entry key="The service name is empty, request from ip address [%s], forwarded from [%s]">El nombre del servicio es vacío, petición realizada desde la dirección IP [%s], reenviado de [%s]</entry>
+<entry key="Service [%s] input params count: [%s]">Servicio [%s] cantidad de parámetros de entrada: [%s]</entry>
+
+<entry key=""></entry>
+<entry key=""></entry>
+<entry key=""></entry>
+
+</properties>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="ReplicationServicesManager"/>
+	<classpathentry kind="src" path="ReplicationCommonLibs"/>
+	<classpathentry kind="src" path="SystemEnumServices"/>
+	<classpathentry kind="src" path="SystemPing"/>
+	<classpathentry kind="src" path="SystemReplicateCommand"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/jetty-9.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/servlet-3.1"/>
+	<classpathentry kind="lib" path="/home/sirlordt/Documentos/git/servicesdaemon/ServicesDaemon/distro-bin/ServicesDaemon/Libs/CommonLibs.jar" sourcepath="/ServicesDaemon/CommonLibs"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
