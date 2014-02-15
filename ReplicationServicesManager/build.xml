@@ -36,6 +36,12 @@
 
         <property name="SystemPingName" value="SystemReplicationPing" />
         <property name="SystemPingVersion" value="0.0.0.1" />
+
+        <property name="bin-SystemReplicateCommand" value="${bin}/SystemReplicateCommand/" />
+        <property name="src-SystemReplicateCommand" value="SystemReplicateCommand/SystemReplicateCommand" />
+
+        <property name="SystemReplicateCommandName" value="SystemReplicateCommand" />
+        <property name="SystemReplicateCommandVersion" value="0.0.0.1" />
     	
         <property name="src-ReplicationServicesManager" value="ReplicationServicesManager/ReplicationServicesManager/" />
         <property name="bin-ReplicationServicesManager" value="bin/ReplicationServicesManager/" />
@@ -69,6 +75,7 @@
 
         <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager"/>
         <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ReplicationServices"/>
+        <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Store"/>
         <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Langs"/>
         <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs"/>
         <mkdir dir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Logs"/>
@@ -77,6 +84,7 @@
         <copy file="${src-ReplicationServicesManager}/ReplicationServicesManager.conf" todir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager" overwrite="true"/>
         <copy file="${src-ReplicationServicesManager}/Langs/ReplicationServicesManager.init.lang.xml" todir="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Langs" overwrite="true"/>
         
+        <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Store/readme.txt"/>
         <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/readme.txt"/>
         <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt"/>
         <delete file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt"/>
@@ -85,6 +93,7 @@
         <touch file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt"/>
         <touch file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt"/>
         
+        <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Store/readme.txt" append="true" message="Folder needed for store replication commands blocks${line.separator}"/>
         <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Libs/readme.txt" append="true" message="Folder for support library (*.jar) files need for run the manager${line.separator}"/>
         <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/ResponsesFormats/readme.txt" append="true" message="Here you can put all the (*.jar) files that implement the CAbstractResponseFormat class to extend formats reponses embedded in system.${line.separator}${line.separator}The directory must exist.${line.separator}"/>
         <echo file="${bin-ServicesDaemon}/Managers/03_ReplicationServicesManager/Temp/readme.txt" append="true" message="Temporal storage for multiple purposes${line.separator}"/>
@@ -158,6 +167,7 @@
         <javac includeantruntime="false" destdir="${bin}" includes="**/*.java" debug="${EnableDebug}">
             <src path="${src-SystemEnumServices}" />
             <src path="${src-SystemPing}" />
+            <src path="${src-SystemReplicateCommand}" />
             <classpath refid="class_path_ServicesDaemon_Libs_jars"/>
             <!-- Include en el class path the ReplicationCommonLibs.jar and another jar located in libs folder -->
             <classpath refid="class_path_ReplicationServicesManager_Libs_jars"/>
@@ -207,5 +217,25 @@
             </fileset>
         </copy> 
 
+        <delete file="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Replicate.Command/${SystemReplicateCommand}.jar"/>
+        
+        <jar jarfile="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Replicate.Command/${SystemReplicateCommandName}.jar" index="no" compress="yes" update="true">
+            <fileset dir="${bin}" includes="${SystemReplicateCommandName}/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By" value="${user.name}" />
+                <attribute name="Specification-Title" value="${SystemReplicateCommandName}" />
+                <attribute name="Specification-Version" value="${SystemReplicateCommandVersion}" />
+            </manifest>
+            <service type="ReplicationCommonClasses.CReplicationAbstractService">
+                <provider classname="SystemReplicateCommand.CSystemReplicateCommand"/>
+            </service>  
+        </jar>
+    
+        <copy todir="${bin-ServicesDaemon-ReplicationServicesManager}/ReplicationServices/System.Replicate.Command/Langs/" overwrite="true">
+            <fileset dir="${src-SystemReplicateCommand}/Langs">
+                <include name="**/*.lang.xml" />
+            </fileset>
+        </copy> 
+    	
     </target>	
 </project>

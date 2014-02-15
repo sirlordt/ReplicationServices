@@ -11,11 +11,17 @@ import org.w3c.dom.NodeList;
 
 import CommonClasses.CAbstractConfigLoader;
 import CommonClasses.CConfigRegisterService;
+import CommonClasses.CExpresionFilter;
+import CommonClasses.CExpresionsFilters;
 import CommonClasses.CLanguage;
 import CommonClasses.ConstantsCommonConfigXMLTags;
 import CommonClasses.ConstantsCommonClasses;
 import CommonClasses.ConstantsMessagesCodes;
 import ExtendedLogger.CExtendedLogger;
+import ReplicationCommonClasses.CMasterReplicationStore;
+import ReplicationCommonClasses.IDBReplicationSecurity;
+import ReplicationCommonClasses.IDBReplicationStore;
+import ReplicationCommonClasses.IDBReplicationWorker;
 
 public class CConfigServicesManager extends CAbstractConfigLoader {
 
@@ -30,6 +36,7 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 	
 	public String strTempDir;
 	public String strServicesDir;
+	public String strStoreDir;
 	public String strResponsesFormatsDir;
 	public String strDefaultResponseFormat;
 	public String strDefaultResponseFormatVersion;
@@ -79,6 +86,7 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 		
 		strTempDir = strRunningPath + ConstantsCommonClasses._Temp_Dir; //"Temp/";
 		strServicesDir = strRunningPath + ConstantsServicesManager._Services_Dir; //"DBServices/"; 
+		strStoreDir = strRunningPath + ConstantsServicesManager._Store_Dir; //"ReplicationStore/";
 		strResponsesFormatsDir = strRunningPath + ConstantsCommonClasses._Responses_Formats_Dir; //"ResponsesFormats/";
 		
 		strGlobalDateTimeFormat = ConstantsCommonClasses._Global_Date_Time_Format;
@@ -120,7 +128,7 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 		   
 			if ( ConfigSectionNode.hasAttributes() == true ) {
 		
-				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Password, ConstantsCommonConfigXMLTags._Temp_Dir, ConstantsConfigXMLTags._ReplicationServices_Dir, ConstantsCommonConfigXMLTags._Responses_Formats_Dir, ConstantsCommonConfigXMLTags._Default_Response_Format, ConstantsCommonConfigXMLTags._Default_Response_Format_Version, ConstantsCommonConfigXMLTags._Response_Request_Method, ConstantsCommonConfigXMLTags._Request_Timeout, ConstantsCommonConfigXMLTags._Socket_Timeout };
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Password, ConstantsCommonConfigXMLTags._Temp_Dir, ConstantsConfigXMLTags._Store_Dir, ConstantsConfigXMLTags._Services_Dir, ConstantsCommonConfigXMLTags._Responses_Formats_Dir, ConstantsCommonConfigXMLTags._Default_Response_Format, ConstantsCommonConfigXMLTags._Default_Response_Format_Version, ConstantsCommonConfigXMLTags._Response_Request_Method, ConstantsCommonConfigXMLTags._Request_Timeout, ConstantsCommonConfigXMLTags._Socket_Timeout };
 
 				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
 
@@ -154,7 +162,7 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 						    }
 						
 						}
-						else if ( NodeAttribute.getNodeName().equals( ConstantsConfigXMLTags._ReplicationServices_Dir ) ) {
+						else if ( NodeAttribute.getNodeName().equals( ConstantsConfigXMLTags._Services_Dir ) ) {
 
 							this.strServicesDir = NodeAttribute.getNodeValue();
 		
@@ -164,9 +172,30 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 						        	
 						    }
 
-					        Logger.logMessage( "1", Lang.translate( "Runtime config value [%s] changed to: [%s]", "strDBServicesDir", this.strServicesDir ) );
+					        Logger.logMessage( "1", Lang.translate( "Runtime config value [%s] changed to: [%s]", "strServicesDir", this.strServicesDir ) );
 				        
 					        if ( Utilities.checkDir( this.strServicesDir, Logger, Lang ) == false ) {
+						    	
+					        	bResult = false;
+					        	
+					        	break;
+						    	
+						    }
+						
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsConfigXMLTags._Store_Dir ) ) {
+
+							this.strStoreDir = NodeAttribute.getNodeValue();
+		
+					        if ( this.strStoreDir != null && this.strStoreDir.isEmpty() == false && new File( this.strStoreDir ).isAbsolute() == false ) {
+
+					        	this.strStoreDir = this.strRunningPath + this.strStoreDir;
+						        	
+						    }
+
+					        Logger.logMessage( "1", Lang.translate( "Runtime config value [%s] changed to: [%s]", "strStoreDir", this.strStoreDir ) );
+				        
+					        if ( Utilities.checkDir( this.strStoreDir, Logger, Lang ) == false ) {
 						    	
 					        	bResult = false;
 					        	
@@ -325,9 +354,9 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
 		            }
 		            else {
 
-		            	if ( strAttributesOrder[ intAttributesIndex ].equals( ConstantsConfigXMLTags._ReplicationServices_Dir ) ) {
+		            	if ( strAttributesOrder[ intAttributesIndex ].equals( ConstantsConfigXMLTags._Services_Dir ) ) {
 		            		
-					        Logger.logWarning( "-1", Lang.translate( "The [%s] attribute not found, using the default value [%s]", ConstantsConfigXMLTags._ReplicationServices_Dir, this.strServicesDir ) );
+					        Logger.logWarning( "-1", Lang.translate( "The [%s] attribute not found, using the default value [%s]", ConstantsConfigXMLTags._Services_Dir, this.strServicesDir ) );
 
 					        if ( Utilities.checkDir( this.strServicesDir, Logger, Lang ) == false ) {
 						    	
@@ -965,6 +994,891 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
         return bResult;
 
 	}
+
+	public CExpresionsFilters loadConfigFilter( Node ConfigSectionNode, String strFiltersName, String strFiltersType, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		CExpresionsFilters ExpFilters = new CExpresionsFilters();
+		
+        try {
+
+    		ExpFilters.strName = strFiltersName;
+    		ExpFilters.strType = strFiltersType;		        		
+		
+    		NodeList ConfigFiltersList = ConfigSectionNode.getChildNodes();
+
+    		if ( ConfigFiltersList.getLength() > 0 ) {
+
+    			for ( int intConfigFilterIndex = 0; intConfigFilterIndex < ConfigFiltersList.getLength(); intConfigFilterIndex++ ) {
+
+    				Node ConfigFilterNode = ConfigFiltersList.item( intConfigFilterIndex );
+
+    				Logger.logMessage( "1", Lang.translate( "Reading XML node filter: [%s]", ConfigFilterNode.getNodeName() ) );        
+
+    				if ( ConfigFilterNode.getNodeName().equals( ConstantsCommonConfigXMLTags._Filter ) == true ) {
+
+    					if ( ConfigFilterNode.hasAttributes() == true ) {
+
+    						String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Type };
+
+    						String strType = "";
+    						String strExpression = "";
+
+    						if ( ConfigFilterNode.getTextContent() != null && ConfigFilterNode.getTextContent().isEmpty() == false ) {
+
+    							NamedNodeMap NodeAttributes = ConfigFilterNode.getAttributes();
+
+    							strExpression = ConfigFilterNode.getTextContent();
+
+    							for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+
+    								Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+
+    								if ( NodeAttribute != null ) {
+
+    									Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+    									Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+
+    									if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Type ) ) {
+
+    										if ( NodeAttribute.getNodeValue().isEmpty() == false ) {
+
+    											if ( NodeAttribute.getNodeValue().toLowerCase().equals( ConstantsCommonConfigXMLTags._Type_Exact ) || NodeAttribute.getNodeValue().toLowerCase().equals( ConstantsCommonConfigXMLTags._Type_Partial ) || NodeAttribute.getNodeValue().toLowerCase().equals( ConstantsCommonConfigXMLTags._Type_RExp ) ) {
+
+    												strType = NodeAttribute.getNodeValue().toLowerCase();
+
+    												Logger.logMessage( "1", Lang.translate( "Runtime config value [%s] changed to: [%s]", strAttributesOrder[ intAttributesIndex ], strType ) );
+
+    											}
+    											else {
+
+    												Logger.logError( "1004", Lang.translate( "The [%s] attribute value [%s] must be only one of the next values: [%s,%s,%s]", strAttributesOrder[ intAttributesIndex ], NodeAttribute.getNodeValue(), ConstantsCommonConfigXMLTags._Type_Exact, ConstantsCommonConfigXMLTags._Type_Partial, ConstantsCommonConfigXMLTags._Type_RExp ) );
+
+    											}
+
+    										}
+    										else {
+
+    											Logger.logError( "1003", Lang.translate( "The [%s] attribute cannot empty string, for the node [%s] at relative index [%s], ignoring the node", strAttributesOrder[ intAttributesIndex ], ConfigFilterNode.getNodeName(), Integer.toString( intConfigFilterIndex ) ) );
+
+    											break;
+
+    										}
+
+    									}
+
+    								}
+    								else {
+
+    									Logger.logError( "1002", Lang.translate( "The [%s] attribute not found, for the node [%s] at relative index [%s], ignoring the node", strAttributesOrder[ intAttributesIndex ], ConfigFilterNode.getNodeName(), Integer.toString( intConfigFilterIndex ) ) );
+
+    									break;
+
+    								}
+
+    							}
+
+    							if ( strType.isEmpty() == false && strExpression.isEmpty() == false ) {
+
+    								CExpresionFilter ExpFilter = new CExpresionFilter();
+    								ExpFilter.strType = strType;
+    								ExpFilter.strExpression = strExpression;
+
+    								ExpFilters.Filters.add( ExpFilter );
+    								
+    							}
+
+    						}
+    						else {
+
+    							Logger.logError( "1001", Lang.translate( "The [%s] node value cannot empty string, at relative index [%s], ignoring the node", ConfigFilterNode.getNodeName(), Integer.toString( intConfigFilterIndex ) ) );
+
+    						}
+    					
+    					}
+
+    				}
+
+    			}
+
+    		}
+        	
+        
+        }
+		catch ( Exception Ex ) {
+			
+			Logger.logException( "-1010", Ex.getMessage(), Ex );
+			
+		}
+        
+        return ExpFilters;
+		
+	}
+	
+	public boolean loadConfigSectionFilters( int intConfigSectionIndex, Node ConfigSectionNode, IDBReplicationStore DBReplicationStore, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		boolean bResult = true;
+
+		try {
+
+			if ( ConfigSectionNode.hasAttributes() == true ) {
+				
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Type };
+
+				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
+
+				String strType = "";
+				
+				for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+
+					Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+
+					if ( NodeAttribute != null ) {
+
+						Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+						Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+
+						if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Type ) ) {
+
+					        if ( NodeAttribute.getNodeValue().isEmpty() == false ) {
+						        
+								if ( NodeAttribute.getNodeValue().toLowerCase().equals( ConstantsCommonConfigXMLTags._Type_Allow ) || NodeAttribute.getNodeValue().toLowerCase().equals( ConstantsCommonConfigXMLTags._Type_Block ) ) {
+					        	
+									strType = NodeAttribute.getNodeValue().toLowerCase();
+
+									Logger.logMessage( "1", Lang.translate( "Runtime config value [%s] changed to: [%s]", "strType", strType ) );
+								
+								}
+								else {
+									
+									Logger.logError( "1001", Lang.translate( "The [%s] attribute value [%s] must be only one of the next values: [%s,%s]", ConstantsCommonConfigXMLTags._Type, NodeAttribute.getNodeValue(), ConstantsCommonConfigXMLTags._Type_Allow, ConstantsCommonConfigXMLTags._Type_Block ) );
+									
+								}
+								
+								
+					        }
+					        else {
+					        	
+								Logger.logError( "1002", Lang.translate( "The [%s] attribute cannot empty string, for the section [%s], ignoring the section", ConstantsCommonConfigXMLTags._Type, ConfigSectionNode.getNodeName() ) );
+
+								break;
+					        	
+					        }
+							
+						}
+
+					}
+		            else {
+
+		            	Logger.logError( "1003", Lang.translate( "The [%s] attribute not found, for the section [%s], ignoring the section", ConstantsCommonConfigXMLTags._Type, ConfigSectionNode.getNodeName() ) );
+		            	
+						break;
+						
+		            }
+
+				}
+				
+				if ( strType.isEmpty() == false ) {
+					
+					CExpresionsFilters ExpFilters = this.loadConfigFilter( ConfigSectionNode, "filters", strType, Logger, Lang );
+
+					if ( ExpFilters.Filters.size() > 0 ) {
+
+						DBReplicationStore.setFilters( ExpFilters );
+
+					}
+					
+				}
+				
+			}
+		
+		}
+		catch ( Exception Ex ) {
+			
+			bResult = false;
+			
+			Logger.logException( "-1010", Ex.getMessage(), Ex );
+			
+		}
+		
+		return bResult;
+		
+	}
+	
+	public boolean loadConfigSectionReplicationSecurity( Node ConfigSectionNode, IDBReplicationStore DBReplicationStore, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		boolean bResult = false;
+		
+		try {
+		
+			if ( ConfigSectionNode.hasAttributes() == true ) {
+				
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Class_Name, ConstantsCommonConfigXMLTags._Config_File };
+
+				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
+
+	            String strClassName = "";
+	            String strConfigFile = "";
+	            
+		        for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+		        	
+		            Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+		        	
+		            if ( NodeAttribute != null ) {
+		            	
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+						
+						if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Class_Name ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strClassName = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1002", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Class_Name ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Config_File ) ) {
+
+							strConfigFile = NodeAttribute.getNodeValue().trim();
+							
+					        if ( strConfigFile != null && strConfigFile.isEmpty() == false && new File( strConfigFile ).isAbsolute() == false ) {
+
+								strConfigFile = this.strRunningPath + strConfigFile;
+						        	
+						        if ( Utilities.checkFile( strConfigFile, Logger, Lang ) == false ) {
+							    	
+						        	bResult = false;
+						        	break;
+							    	
+							    }
+								
+						    }
+							else {
+
+								Logger.logError( "-1003", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Config_File ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+		            
+		            }
+					else {
+
+						Logger.logError( "-1001", Lang.translate( "The [%s] attribute not found, for the section [%s], ignoring the section", strAttributesOrder[ intAttributesIndex ], ConfigSectionNode.getNodeName() ) );
+						break;
+
+					}
+		           
+		        }     
+			
+		        if ( bResult && strClassName.isEmpty() == false && strConfigFile.isEmpty() == false ) {
+		        	
+					Object DBReplicationSecurityObject = Class.forName( strClassName ).newInstance();
+					
+					if ( DBReplicationSecurityObject instanceof IDBReplicationSecurity ) {
+
+						IDBReplicationSecurity DBReplicationSecurity = (IDBReplicationSecurity) DBReplicationSecurityObject;
+
+						if ( DBReplicationSecurity.loadConfig( strRunningPath, strConfigFile, Logger, Lang ) ) {
+							
+							if ( DBReplicationStore.getDBReplicationSecurity() == null ) {
+								
+								DBReplicationStore.setDBReplicationSecurity( DBReplicationSecurity );
+
+								Logger.logMessage( "1", Lang.translate( "DB replication security defined" ) );        
+								
+							}
+							else {
+
+								Logger.logError( "-1007", Lang.translate( "DB replication security already defined" ) );        
+								
+							}
+							
+						}
+						else {
+							
+							Logger.logError( "-1006", Lang.translate( "Failed to load the config file [%s]", strConfigFile ) );        
+							
+						}
+						
+					}
+					else {
+						
+						Logger.logError( "-1005", Lang.translate( "The class [%s] not implements the [%s] interface", DBReplicationSecurityObject.getClass().getCanonicalName(), IDBReplicationSecurity.class.getCanonicalName() ) );
+						
+					}
+		        	
+		        }
+		        else {
+		        	
+					Logger.logError( "-1004", Lang.translate( "DB replication security config attributes is not valid" ) );
+		        	
+		        }
+		        
+			}
+			
+		}
+		catch ( Error Err ) {
+
+			Logger.logError( "-1025", Err.getMessage(), Err );
+
+		}
+		catch ( Exception Ex ) {
+
+			Logger.logException( "-1026", Ex.getMessage(), Ex );
+
+		}
+        
+        return bResult;
+		
+	}
+
+	public boolean loadConfigSectionPushReplication( Node ConfigSectionNode, IDBReplicationStore DBReplicationStore, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		boolean bResult = false;
+		
+		try {
+		
+			if ( ConfigSectionNode.hasAttributes() == true ) {
+				
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Class_Name, ConstantsCommonConfigXMLTags._Config_File };
+
+				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
+
+	            String strClassName = "";
+	            String strConfigFile = "";
+	            
+		        for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+		        	
+		            Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+		        	
+		            if ( NodeAttribute != null ) {
+		            	
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+						
+						if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Class_Name ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strClassName = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1002", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Class_Name ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Config_File ) ) {
+
+							strConfigFile = NodeAttribute.getNodeValue().trim();
+							
+					        if ( strConfigFile != null && strConfigFile.isEmpty() == false && new File( strConfigFile ).isAbsolute() == false ) {
+
+								strConfigFile = this.strRunningPath + strConfigFile;
+						        	
+						        if ( Utilities.checkFile( strConfigFile, Logger, Lang ) == false ) {
+							    	
+						        	bResult = false;
+						        	break;
+							    	
+							    }
+								
+						    }
+							else {
+
+								Logger.logError( "-1003", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Config_File ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+		            
+		            }
+					else {
+
+						Logger.logError( "-1001", Lang.translate( "The [%s] attribute not found, for the section [%s], ignoring the section", strAttributesOrder[ intAttributesIndex ], ConfigSectionNode.getNodeName() ) );
+						break;
+
+					}
+		           
+		        }     
+			
+		        if ( bResult && strClassName.isEmpty() == false && strConfigFile.isEmpty() == false ) {
+		        	
+		        	if ( DBReplicationStore.getPushDBReplicationWorker() == null ) {
+
+		        		Object DBReplicationWorkerObject = Class.forName( strClassName ).newInstance();
+
+		        		if ( DBReplicationWorkerObject instanceof IDBReplicationWorker ) {
+
+		        			IDBReplicationWorker DBReplicationWorker = (IDBReplicationWorker) DBReplicationWorkerObject;
+
+		        			if ( DBReplicationWorker.loadConfig( strRunningPath, strConfigFile, Logger, Lang ) ) {
+
+		        				DBReplicationStore.setPushReplicationWorker( DBReplicationWorker );
+
+		        				Logger.logMessage( "1", Lang.translate( "Push DB replication worker defined" ) );        
+
+		        			}
+		        			else {
+
+		        				Logger.logError( "-1007", Lang.translate( "Failed to load the config file [%s]", strConfigFile ) );        
+
+		        			}
+
+		        		}
+		        		else {
+
+		        			Logger.logError( "-1006", Lang.translate( "The class [%s] not implements the [%s] interface", DBReplicationWorkerObject.getClass().getCanonicalName(), IDBReplicationWorker.class.getCanonicalName() ) );
+
+		        		}
+
+		        	}
+		        	else {
+
+		        		Logger.logError( "-1005", Lang.translate( "Push DB replication worker already defined" ) );        
+
+		        	}
+					
+		        }
+		        else {
+		        	
+					Logger.logError( "-1004", Lang.translate( "Push DB replication worker config attributes is not valid" ) );
+		        	
+		        }
+		        
+			}
+			
+		}
+		catch ( Error Err ) {
+
+			Logger.logError( "-1025", Err.getMessage(), Err );
+
+		}
+		catch ( Exception Ex ) {
+
+			Logger.logException( "-1026", Ex.getMessage(), Ex );
+
+		}
+        
+        return bResult;
+		
+	}
+	
+	public boolean loadConfigSectionPullReplication( Node ConfigSectionNode, IDBReplicationStore DBReplicationStore, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		boolean bResult = false;
+		
+		try {
+		
+			if ( ConfigSectionNode.hasAttributes() == true ) {
+				
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Class_Name, ConstantsCommonConfigXMLTags._Config_File };
+
+				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
+
+	            String strClassName = "";
+	            String strConfigFile = "";
+	            
+		        for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+		        	
+		            Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+		        	
+		            if ( NodeAttribute != null ) {
+		            	
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+						
+						if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Class_Name ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strClassName = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1002", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Class_Name ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Config_File ) ) {
+
+							strConfigFile = NodeAttribute.getNodeValue().trim();
+							
+					        if ( strConfigFile != null && strConfigFile.isEmpty() == false && new File( strConfigFile ).isAbsolute() == false ) {
+
+								strConfigFile = this.strRunningPath + strConfigFile;
+						        
+						        if ( Utilities.checkFile( strConfigFile, Logger, Lang ) == false ) {
+							    	
+						        	bResult = false;
+						        	break;
+							    	
+							    }
+								
+						    }
+							else {
+
+								Logger.logError( "-1003", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Config_File ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+		            
+		            }
+					else {
+
+						Logger.logError( "-1001", Lang.translate( "The [%s] attribute not found, for the section [%s], ignoring the section", strAttributesOrder[ intAttributesIndex ], ConfigSectionNode.getNodeName() ) );
+						break;
+
+					}
+		           
+		        }     
+			
+		        if ( bResult && strClassName.isEmpty() == false && strConfigFile.isEmpty() == false ) {
+		        	
+					if ( DBReplicationStore.getPullDBReplicationWorker() == null ) {
+						
+						Object DBReplicationWorkerObject = Class.forName( strClassName ).newInstance();
+
+						if ( DBReplicationWorkerObject instanceof IDBReplicationWorker ) {
+
+							IDBReplicationWorker DBReplicationWorker = (IDBReplicationWorker) DBReplicationWorkerObject;
+
+							if ( DBReplicationWorker.loadConfig( strRunningPath, strConfigFile, Logger, Lang ) ) {
+
+								DBReplicationStore.setPullReplicationWorker( DBReplicationWorker );
+
+								Logger.logMessage( "1", Lang.translate( "Pull DB replication worker defined" ) );        
+
+							}
+							else {
+
+								Logger.logError( "-1007", Lang.translate( "Failed to load the config file [%s]", strConfigFile ) );        
+
+							}
+
+						}
+						else {
+
+							Logger.logError( "-1006", Lang.translate( "The class [%s] not implements the [%s] interface", DBReplicationWorkerObject.getClass().getCanonicalName(), IDBReplicationWorker.class.getCanonicalName() ) );
+
+						}
+
+					}
+					else {
+
+						Logger.logError( "-1005", Lang.translate( "Pull DB replication worker already defined" ) );        
+						
+					}
+					
+		        }
+		        else {
+		        	
+					Logger.logError( "-1004", Lang.translate( "Pull DB replication worker config attributes is not valid" ) );
+		        	
+		        }
+		        
+			}
+			
+		}
+		catch ( Error Err ) {
+
+			Logger.logError( "-1025", Err.getMessage(), Err );
+
+		}
+		catch ( Exception Ex ) {
+
+			Logger.logException( "-1026", Ex.getMessage(), Ex );
+
+		}
+        
+        return bResult;
+		
+	}
+	
+	public boolean loadConfigSectionReplicationStore( Node ConfigSectionNode, String strName, String strClassName, String strTargetDatabase, String strConfigFile, CExtendedLogger Logger, CLanguage Lang ) {
+		
+		boolean bResult = false;
+		
+		try {
+		
+			NodeList ConfigSectionList = ConfigSectionNode.getChildNodes();
+
+			Object DBReplicationObject = Class.forName( strClassName ).newInstance();
+		
+			if ( DBReplicationObject instanceof IDBReplicationStore ) {
+
+				IDBReplicationStore DBReplicationStore = (IDBReplicationStore) DBReplicationObject;
+				
+				if ( DBReplicationStore.loadConfig( strRunningPath, strStoreDir, strName, strTargetDatabase, strConfigFile, Logger, Lang) ) {
+					
+					for ( int intLocalConfigSectionIndex = 0; intLocalConfigSectionIndex < ConfigSectionList.getLength(); intLocalConfigSectionIndex++ ) {
+
+						Node ConfigSection = ConfigSectionList.item( intLocalConfigSectionIndex );
+
+						Logger.logMessage( "1", Lang.translate( "Reading XML node section: [%s]", ConfigSection.getNodeName() ) );        
+
+						if ( ConfigSection.getNodeName().equals( ConstantsCommonConfigXMLTags._Filters ) == true ) {
+
+							if ( loadConfigSectionReplicationSecurity( ConfigSection, DBReplicationStore, Logger, Lang ) == false ) {
+
+								Logger.logWarning( "-1", Lang.translate( "Failed to load config from XML node section: [%s]", ConfigSection.getNodeName() ) );        
+                                break;
+								
+							}
+							
+						}	
+						else if ( ConfigSection.getNodeName().equals( ConstantsConfigXMLTags._Security ) == true ) {
+
+							if ( loadConfigSectionReplicationSecurity( ConfigSection, DBReplicationStore, Logger, Lang ) == false ) {
+
+								Logger.logWarning( "-1", Lang.translate( "Failed to load config from XML node section: [%s]", ConfigSection.getNodeName() ) );        
+                                break;
+								
+							}
+							
+						}	
+						else if ( ConfigSection.getNodeName().equals( ConstantsConfigXMLTags._PushReplication ) == true ) {
+
+							if ( loadConfigSectionPushReplication( ConfigSection, DBReplicationStore, Logger, Lang ) == false ) {
+
+								Logger.logWarning( "-1", Lang.translate( "Failed to load config from XML node section: [%s]", ConfigSection.getNodeName() ) );        
+                                break;
+
+							}
+							
+						}	
+						else if ( ConfigSection.getNodeName().equals( ConstantsConfigXMLTags._PullReplication ) == true ) {
+
+							if ( loadConfigSectionPullReplication( ConfigSection, DBReplicationStore, Logger, Lang ) == false ) {
+
+								Logger.logWarning( "-1", Lang.translate( "Failed to load config from XML node section: [%s]", ConfigSection.getNodeName() ) );        
+                                break;
+
+							}
+							
+						}	
+					
+					}		
+		        	
+					if ( DBReplicationStore.getDBReplicationSecurity() != null ) {
+					
+						CMasterReplicationStore MasterReplicationStore = CMasterReplicationStore.getMasterReplicationStore();
+
+						MasterReplicationStore.registerReplicationStore( DBReplicationStore );
+		        	
+						bResult = true;
+						
+					}
+					else {
+						
+						Logger.logError( "-1003", Lang.translate( "No DB replication security defined" ) );        
+						
+					}
+		        	
+				}
+				else {
+					
+					Logger.logError( "-1002", Lang.translate( "Failed to load the config file [%s]", strConfigFile ) );        
+					
+				}
+				
+			}
+			else {
+				
+				Logger.logError( "-1001", Lang.translate( "The class [%s] not implements the [%s] interface", DBReplicationObject.getClass().getCanonicalName(), IDBReplicationStore.class.getCanonicalName() ) );
+				
+			}
+		
+		}
+		catch ( Error Err ) {
+
+			Logger.logError( "-1025", Err.getMessage(), Err );
+
+		}
+		catch ( Exception Ex ) {
+
+			Logger.logException( "-1026", Ex.getMessage(), Ex );
+
+		}
+        
+        return bResult;
+		
+	}
+	
+	public boolean loadConfigSectionReplicationStore( Node ConfigSectionNode, CLanguage Lang, CExtendedLogger Logger ) {
+		
+        boolean bResult = true;
+		
+        try {
+		   
+			if ( ConfigSectionNode.hasAttributes() == true ) {
+		
+				String strAttributesOrder[] = { ConstantsCommonConfigXMLTags._Class_Name, ConstantsCommonConfigXMLTags._Name, ConstantsConfigXMLTags._Target_Database, ConstantsCommonConfigXMLTags._Config_File };
+
+				NamedNodeMap NodeAttributes = ConfigSectionNode.getAttributes();
+
+	            String strName = "";
+	            String strClassName = "";
+	            String strTargetDatabase = "";
+	            String strConfigFile = "";
+	            
+		        for ( int intAttributesIndex = 0; intAttributesIndex < strAttributesOrder.length; intAttributesIndex++ ) {
+		        	
+		            Node NodeAttribute = NodeAttributes.getNamedItem( strAttributesOrder[ intAttributesIndex ] );
+		        	
+		            if ( NodeAttribute != null ) {
+		            	
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute name: [%s]", NodeAttribute.getNodeName() ) );
+		            	Logger.logMessage( "1", Lang.translate( "Node attribute value: [%s]", NodeAttribute.getNodeValue() ) );
+						
+						if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Name ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strName = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1002", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Name ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Class_Name ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strClassName = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1003", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Class_Name ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsConfigXMLTags._Target_Database ) ) {
+
+							if ( NodeAttribute.getNodeValue().trim().isEmpty() == false ) {
+
+								strTargetDatabase = NodeAttribute.getNodeValue();
+
+							}
+							else {
+
+								Logger.logError( "-1004", Lang.translate( "The [%s] attribute cannot empty string", ConstantsConfigXMLTags._Target_Database ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+						else if ( NodeAttribute.getNodeName().equals( ConstantsCommonConfigXMLTags._Config_File ) ) {
+
+							strConfigFile = NodeAttribute.getNodeValue().trim();
+							
+					        if ( strConfigFile != null && strConfigFile.isEmpty() == false && new File( strConfigFile ).isAbsolute() == false ) {
+
+								strConfigFile = this.strRunningPath + strConfigFile;
+						    
+						        if ( Utilities.checkFile( strConfigFile, Logger, Lang ) == false ) {
+							    	
+						        	bResult = false;
+						        	break;
+							    	
+							    }
+								
+						    }
+							else {
+
+								Logger.logError( "-1005", Lang.translate( "The [%s] attribute cannot empty string", ConstantsCommonConfigXMLTags._Config_File ) );
+								bResult = false;
+								break; //Stop parse more attributes
+
+							}
+							
+						}
+					
+		            }
+					else {
+
+						Logger.logError( "-1001", Lang.translate( "The [%s] attribute not found, for the section [%s], ignoring the section", strAttributesOrder[ intAttributesIndex ], ConfigSectionNode.getNodeName() ) );
+						bResult = false;
+						break;
+
+					}
+		           
+		        }
+		       
+		        if ( bResult && strName.isEmpty() == false && strClassName.isEmpty() == false && strTargetDatabase.isEmpty() == false && strConfigFile.isEmpty() == false ) {
+		        	
+		        	CMasterReplicationStore MasterReplicationStore = CMasterReplicationStore.getMasterReplicationStore();
+		        	
+		        	if ( MasterReplicationStore.getReplicationStoreByName( strName ) == null ) {
+		        		
+						if ( loadConfigSectionReplicationStore( ConfigSectionNode, strName, strClassName, strTargetDatabase, strConfigFile, Logger, Lang ) == false ) {
+
+							Logger.logWarning( "-1", Lang.translate( "Failed to load config from XML node section: [%s]", ConfigSectionNode.getNodeName() ) );        
+
+						}
+		        		
+		        	}
+		        	else {
+		        		
+						Logger.logError( "-1007", Lang.translate( "DB replication store name [%s] already registered", strName ) );
+		        		
+		        	}
+		        	
+		        }
+		        else {
+		        	
+					Logger.logError( "-1006", Lang.translate( "DB replication store config attributes is not valid" ) );
+		        	
+		        }
+		        
+			}  
+
+		}
+		catch ( Exception Ex ) {
+			
+        	bResult = false;
+        	
+			Logger.logException( "-1010", Ex.getMessage(), Ex );
+			
+		}
+			
+        return bResult;
+        
+	}
 	
 	@Override
 	public boolean loadConfigSection( Node ConfigSectionNode, CExtendedLogger Logger, CLanguage Lang ) {
@@ -1006,6 +1920,17 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
         	}
              
         }
+        else if ( ConfigSectionNode.getNodeName().equals( ConstantsConfigXMLTags._ReplicationStore ) == true ) {
+
+			if ( this.loadConfigSectionReplicationStore( ConfigSectionNode, Lang, Logger ) == false ) {
+				
+    			Logger.logError( "-1004", Lang.translate( "Failed to load config from XML node section: [%s] ", ConfigSectionNode.getNodeName() ) );        
+				
+    			bResult = false;
+				
+			} 
+        	
+        }	
 		
 		return bResult;
 		
@@ -1048,6 +1973,8 @@ public class CConfigServicesManager extends CAbstractConfigLoader {
     			return this.strTempDir;  
     		else if ( strMessageName.equals( ConstantsMessagesCodes._Security_Manager_Name ) )
     			return ConstantsServicesManager._Security_Manager_Name;
+    		else if ( strMessageName.equals( ReplicationCommonClasses.ConstantsMessagesCodes._Get_Store_Dir ) )
+    			return this.strStoreDir;
     		else	
     			return "";
 

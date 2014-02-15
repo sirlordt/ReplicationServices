@@ -281,19 +281,19 @@ public class CServicesManager extends CAbstractServicesManager {
     		CClassPathLoader ClassPathLoader = new CClassPathLoader();
 
     		//Load important library class from /Libs folder
-			ClassPathLoader.LoadClassFiles( this.strRunningPath + ConstantsCommonClasses._Libs_Dir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
+			ClassPathLoader.loadClassFiles( this.strRunningPath + ConstantsCommonClasses._Libs_Dir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
 
     		if ( ConfigServicesManager.loadConfig( this.strRunningPath + ConstantsServicesManager._Conf_File, RegisterServicesManagerLogger, RegisterServicesManagerLang ) == true ) {
 
     			try {
 
     				//Load responses formats class
-    				ClassPathLoader.LoadClassFiles( ConfigServicesManager.strResponsesFormatsDir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
+    				ClassPathLoader.loadClassFiles( ConfigServicesManager.strResponsesFormatsDir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
 
     				if ( this.loadAndRegisterResponsesFormats( ServicesDaemonConfig ) == true ) {
 
     					//Load the business process services class
-    					ClassPathLoader.LoadClassFiles( ConfigServicesManager.strServicesDir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
+    					ClassPathLoader.loadClassFiles( ConfigServicesManager.strServicesDir, ConstantsCommonClasses._Lib_Ext, 2, RegisterServicesManagerLogger, RegisterServicesManagerLang  );
 
     					if ( this.loadAndRegisterRegisterServices( ServicesDaemonConfig ) == true ) {
 

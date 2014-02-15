@@ -5,7 +5,7 @@ All code in this repo is licensed to GNU/GPL version 2
 
 HTTP JSON/XML/CSV Restfull interface middleware for RDMS using JDBC
 
-Registration Layer for another databases
+Replication Layer for another databases
 
 ```
   +---------+        +----------------------------------+                     +-----------------------------------------------+
